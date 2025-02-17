@@ -59,7 +59,7 @@ from src.data.Semaphores.Semaphores import processSemaphores
 from src.data.TrafficCommunication.processTrafficCommunication import processTrafficCommunication
 from src.utils.ipManager.IpReplacement import IPManager
 # ------ New component imports starts here ------#
-
+from src.algorithms.main_cv_Process import main_cv_Process
 # ------ New component imports ends here ------#
 # ======================================== SETTING UP ====================================
 allProcesses = list()
@@ -73,14 +73,14 @@ queueList = {
 
 logging = logging.getLogger()
 
-Dashboard = True
-Camera = False
+Dashboard = False
+Camera =False
 Semaphores = False
 TrafficCommunication = False
-SerialHandler = False
+SerialHandler =True
 
 # ------ New component flags starts here ------#
- 
+Lanekeeping = True
 # ------ New component flags ends here ------#
 
 # ===================================== SETUP PROCESSES ==================================
@@ -117,11 +117,13 @@ if TrafficCommunication:
 
 # Initializing serial connection NUCLEO - > PI
 if SerialHandler:
-    processSerialHandler = processSerialHandler(queueList, logging, debugging = False)
+    processSerialHandler = processSerialHandler(queueList, logging, debugging = True)
     allProcesses.append(processSerialHandler)
 
 # ------ New component runs starts here ------#
- 
+if Lanekeeping:
+    main_cv_Process = main_cv_Process(queueList,logging,debugging=False)
+    allProcesses.append(main_cv_Process)
 # ------ New component runs ends here ------#
 
 # ===================================== START PROCESSES ==================================

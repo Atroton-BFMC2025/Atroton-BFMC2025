@@ -2,7 +2,7 @@ import os
 
 def main():
     # Get package name and category from user
-    package_name = input("Enter the package name: ")
+    package_name = input("Enter the package name:c ")
     category = input("Enter the category: ")
 
     # Create the directory path if it doesn't exist

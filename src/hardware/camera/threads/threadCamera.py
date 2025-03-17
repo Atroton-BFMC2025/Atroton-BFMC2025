@@ -145,7 +145,7 @@ class threadCamera(ThreadWithStop):
 
             except Exception as e:
                 print(e)
-
+            
             if send:
                 mainRequest = self.camera.capture_array("main")
                 serialRequest = self.camera.capture_array("lores")  # Will capture an array that can be used by OpenCV library
@@ -178,8 +178,8 @@ class threadCamera(ThreadWithStop):
         config = self.camera.create_preview_configuration(
             buffer_count=1,
             queue=False,
-            main={"format": "RGB888", "size": (2048, 1080)},
-            lores={"size": (512, 270)},
+            main={"format": "RGB888", "size": (256, 135)}, #720x350
+            lores={"size": (256, 135)},#360 180
             encode="lores",
         )
         self.camera.configure(config)

@@ -64,7 +64,7 @@ class LaneFollower:
         return steering_angle
 
 
-    def display_heading_line(self, frame, steering_angle, line_color=(0, 255,0), line_width=5):
+    def display_heading_line(self, frame, steering_angle, line_color=(255,0,0), line_width=4):
         heading_image = np.zeros_like(frame)
         height, width, _ = frame.shape
         steering_angle_radian = steering_angle / 180.0 * math.pi
@@ -162,7 +162,7 @@ def average_slope_intercept(frame, line_segments):
     return lane_lines
 
 
-def display_lines(frame, lines, line_color=(0, 255, 255), line_width=20):
+def display_lines(frame, lines, line_color=(0, 255, 0), line_width=10):
     line_image = np.zeros_like(frame)
     if lines is not None:
         for line in lines:
@@ -180,9 +180,9 @@ def region_of_interest(edges):
 
     # only focus bottom half of the screen
     polygon = np.array([[
-        (0, height *1/2),
-        (width, height*1/2),
-        (width, height),
+        (width*0.2 , height *0.6),
+        (width*0.6 ,height*0.6),
+        (width, height), # right side 
         (0, height),
     ]], np.int32)
     """polygon = np.array([[
@@ -194,4 +194,23 @@ def region_of_interest(edges):
     cv2.fillPoly(mask, polygon, 255)
     cropped_edges = cv.bitwise_and(edges, mask)
     return cropped_edges
+'''
+def region_of_interest(edges, image):
+    img = np.zeros_like(edges)
+    imshape = image.shape
+    lower_left = [0+imshape[1]/10, imshape[0]]
+    lower_right = [imshape[1]-imshape[1]/10, imshape[0]]
+    top_left = [imshape[1] / 2 - imshape[1] / 4, imshape[0] / 2 + imshape[0] / 6]
+    top_right = [imshape[1] / 2 + imshape[1] / 4, imshape[0] / 2 + imshape[0] / 6]
+        
+    vertices = [np.array([lower_left, top_left, top_right, lower_right], dtype=np.int32)]
+    if len(edges.shape) > 2:
+        mask_color_ignore = (255, ) * edges.shape[2]
+    else:
+        mask_color_ignore = 255
+    cv2.fillPoly(img, vertices, mask_color_ignore)
+    cropped_edges = cv2.bitwise_and(edges, img)
+    # io.imshow(img)
+    return cropped_edges
 
+ '''

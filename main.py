@@ -60,6 +60,7 @@ from src.data.TrafficCommunication.processTrafficCommunication import processTra
 from src.utils.ipManager.IpReplacement import IPManager
 # ------ New component imports starts here ------#
 from src.algorithms.main_cv_Process import main_cv_Process
+from src.algorithms.sign_detection.processsign_detection import processsign_detection
 # ------ New component imports ends here ------#
 # ======================================== SETTING UP ====================================
 allProcesses = list()
@@ -73,14 +74,15 @@ queueList = {
 
 logging = logging.getLogger()
 
-Dashboard = False
-Camera =False
+Dashboard = True
+Camera =True
 Semaphores = False
 TrafficCommunication = False
 SerialHandler =True
 
 # ------ New component flags starts here ------#
 Lanekeeping = True
+sign_detection =True
 # ------ New component flags ends here ------#
 
 # ===================================== SETUP PROCESSES ==================================
@@ -124,6 +126,10 @@ if SerialHandler:
 if Lanekeeping:
     main_cv_Process = main_cv_Process(queueList,logging,debugging=False)
     allProcesses.append(main_cv_Process)
+
+if sign_detection:
+    processsign_detection = processsign_detection(queueList,logging,debugging=False)
+    allProcesses.append(processsign_detection)
 # ------ New component runs ends here ------#
 
 # ===================================== START PROCESSES ==================================

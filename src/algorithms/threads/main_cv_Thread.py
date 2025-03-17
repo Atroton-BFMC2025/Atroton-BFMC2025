@@ -8,7 +8,9 @@ from time import time
 import logging
 import math
 import matplotlib as plt 
-from picamera2 import Picamera2
+#from picamera2 import Picamera2
+
+#from src.algorithms.threads.camera_init import Camera_init
 
 from src.utils.messages.allMessages import SteerMotor,mainCamera,Klem,SpeedMotor
 from src.utils.messages.messageHandlerSender import messageHandlerSender
@@ -43,8 +45,8 @@ class main_cv_Thread(ThreadWithStop):
         self.steerMotorSender = messageHandlerSender(self.queuesList, SteerMotor)
         self.speedMotorSender =messageHandlerSender(self.queuesList, SpeedMotor)
         self.cameraSender = messageHandlerSender(self.queuesList, mainCamera)
-
         self.subscribe()
+        #self.camera_init = Camera_init()
 
     def subscribe(self):
         self.serialCameraSubscriber = messageHandlerSubscriber(self.queuesList,mainCamera,"lastOnly",True)
@@ -58,40 +60,47 @@ class main_cv_Thread(ThreadWithStop):
     
     def run(self):
         print('Started')
+        '''
         picam2 = Picamera2()
         config = picam2.create_preview_configuration(
             buffer_count=1,
             queue=False,
-            main={"format": "RGB888", "size": (320,180)},
+            main={"format": "RGB888", "size": (320,180)}, # 320 x 180
             lores={"size": (320, 180)},
             encode="lores"
         )
         picam2.configure(config)
         #picam2.set_controls({"ScalerCrop": (0, 0, 3280, 2464)}) 
-        picam2.start()
+        picam2.start()'
+        '''
         self.klSender.send("30")
-        model = YOLO("/home/pi/brain_25/yolo/semifinal_model_3.torchscript")
-
-        
-   
-        
+                
         #cap = cv.VideoCapture("bosch_test.mp4")
-
-    
-        
         while self._running:
             try:
                 lane_follower =LaneFollower()
-                frame = picam2.capture_array()
-
-
+                #frame = picam2.capture_array()
+                #frame = self.camera_init.camera_frames()
                 #_, frame = cap.read()
+                # Retrieve frame data from the mainCamera subscriber
+                frame_data = self.serialCameraSubscriber.receive()
+                if frame_data is None:
+                    continue  # No new frame available
+
+                # Decode the base64 image data
+                frame_bytes = base64.b64decode(frame_data)
+                frame_np = np.frombuffer(frame_bytes, dtype=np.uint8)
+                frame = cv2.imdecode(frame_np, cv2.IMREAD_COLOR)
+                if frame is None:
+                    print("Failed to decode image")
+                    continue
 
                 # apply some gaussian blur to the image
                 kernel_size = (3, 3)
-                gauss_image = cv.GaussianBlur(frame, kernel_size, 0)
+                gauss_image = cv.GaussianBlur(frame, kernel_size, 0) 
                 # gauss_image =  cv.bilateralFilter(frame, 9, 75, 75)
-
+                #gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                #blur_gray_image = cv2.GaussianBlur(gray_image, (5, 5), 3)
                 # here we convert to the HSV colorspace
                 hsv_image = cv.cvtColor(gauss_image, cv.COLOR_BGR2HSV)
 
@@ -105,6 +114,8 @@ class main_cv_Thread(ThreadWithStop):
                 low_threshold = 200
                 high_threshold = 400
                 canny_edges = cv.Canny(gauss_image, low_threshold, high_threshold) 
+                #laplacian_edges = cv2.Laplacian(blur_gray_image, cv2.CV_16S, ksize=3)
+                #laplacian_edges = cv2.convertScaleAbs(laplacian_edges)
 
                 roi_image = region_of_interest(canny_edges)
 
@@ -113,48 +124,24 @@ class main_cv_Thread(ThreadWithStop):
                 steering=lane_follower.get_steering_angle(frame,lane_lines)
                 normalized = (steering-90)*12
                 #normalized_new = 1.5 * normalized
+                
                 self.steerMotorSender.send(str(normalized))
+                '''
                 if normalized==0 :
-                    self.speedMotorSender.send(str(200))
+                    self.speedMotorSender.send(str(120))
                 else :
                     #self.speedMotorSender.send(str(int(200 - 65*(90/abs(normalized)))))
                     self.speedMotorSender.send(str(120))
-    
+                '''
                 heading_image1 =lane_follower.display_heading_line( frame, steering) 
-                
+               
                 
                 #cv.imshow('raw', frame )
-                cv.imshow('heading', heading_image1)
+                #cv.imshow('heading', heading_image1)
                 line_image = display_lines(frame, lane_lines)
-                #cv.imshow('Line Image', line_image)
+                cv.imshow('Line Image', line_image)
                 #cv.imshow('canny',canny_edges)
-                #cv.imshow('roi',roi_image)
-                
-                #SIGNS DETECTION - YOLO8N
-                results = model(frame)
-                
-    
-                # Output the visual detection data, we will draw this on our camera preview window
-                annotated_frame = results[0].plot()
-                
-                # Get inference time
-                inference_time = results[0].speed['inference']
-                fps = 1000 / inference_time  # Convert to milliseconds
-                text = f'FPS: {fps:.1f}'
-
-                # Define font and position
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                text_size = cv2.getTextSize(text, font, 1, 2)[0]
-                text_x = annotated_frame.shape[1] - text_size[0] - 10  # 10 pixels from the right
-                text_y = text_size[1] + 10  # 10 pixels from the top
-
-                # Draw the text on the annotated frame
-                cv2.putText(annotated_frame, text, (text_x, text_y), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display the resulting frame
-                cv2.imshow("Camera", annotated_frame)
-
-    
+                cv.imshow('roi',roi_image)
         
                 print('steering :',normalized)
                 keyboard = cv.waitKey(30)
@@ -165,7 +152,7 @@ class main_cv_Thread(ThreadWithStop):
             except Exception as e:
                 print(f"Error during processing: {e}")
                # break if laneKeeping:
-                
+
         
         print('Stopped')
         # =============================== START ===============================================
